@@ -96,7 +96,7 @@ main{padding:24px 0 72px}
 .opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:2px solid var(--soft);border-radius:8px;cursor:pointer}
 .opt:has(input:checked){border-color:var(--line);background:var(--bg)}
 .opt.good{border-color:var(--ok);background:var(--okbg)}
-.opt input,.tfg input{accent-color:var(--accent);width:18px;height:18px;margin-top:3px}
+.opt input,.tfg input{accent-color:var(--accent);width:18px;height:18px;margin-top:3px;flex:none}
 .row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:9px 12px;border:2px solid var(--soft);border-radius:8px}
 .row.bad{border-color:var(--bad);background:var(--badbg)}
 .rt{flex:1 1 240px}
@@ -130,12 +130,116 @@ details p{margin:6px 0;white-space:pre-wrap}
 .stack{display:grid;gap:18px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (max-width:480px){body{font-size:16px}.big{font-size:38px}}
+.xh{margin-top:14px;display:grid;gap:4px}
+.xs{margin:0;color:var(--muted)}
+.links{margin-top:18px;display:grid;gap:8px}
+.links ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.links a{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;padding:10px 12px;border:2px solid var(--line);border-radius:10px;color:inherit;text-decoration:none;min-width:0}
+.links a:hover,.links a:focus-visible{border-color:var(--ink)}
+.links b{overflow-wrap:anywhere}
+.links small{grid-column:2;color:var(--muted)}
+.lk{grid-row:1/3;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--ink);color:var(--bg)}
+.mem{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.mcd{min-height:84px;padding:8px 10px;border:2px solid var(--line);border-radius:10px;background:var(--ink);color:var(--bg);font-family:var(--fd);font-size:30px;font-weight:800;cursor:pointer;display:grid;place-items:center;text-align:center}
+.mcd.up{background:var(--bg);color:var(--ink);font-family:var(--fb);font-size:14px;font-weight:600;line-height:1.25}
+.mcd.hit{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.mcd[disabled]{cursor:default;opacity:1}
+.cw{display:grid;gap:14px}
+.cwg{--cs:max(28px,min(38px,calc((100vw - 90px)/var(--cols) - 2px)));display:grid;gap:2px;overflow-x:auto;padding-bottom:4px;justify-content:start}
+.cwb{width:var(--cs);height:var(--cs)}
+.cwc{position:relative;width:var(--cs);height:var(--cs)}
+.cwc i{position:absolute;top:1px;left:3px;font-size:10px;font-style:normal;font-weight:700;color:var(--muted);pointer-events:none;line-height:1}
+.cwi{width:100%;height:100%;padding:8px 0 0;text-align:center;font-weight:700;font-size:calc(var(--cs)*.5);text-transform:uppercase;border:2px solid var(--line);border-radius:4px;background:var(--panel);caret-color:var(--accent)}
+.cwc.bad .cwi{border-color:var(--bad);background:var(--badbg)}
+.cwc.ok .cwi{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+.cwl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}
+.task>*,.cw>*{min-width:0}
+.cwl h4{margin:0 0 4px;font-family:var(--fd);font-size:20px}
+.cwl ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:15px}
+.cwl li b{display:inline-block;min-width:1.6em}
+.cwl .n{color:var(--muted)}
+.so{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.so .row{justify-content:flex-start;flex-wrap:nowrap}
+.so .sn{font-family:var(--fd);font-weight:800;font-size:22px;min-width:1.4em;color:var(--muted)}
+.so .rt{flex:1 1 auto}
+.mvb{display:flex;gap:6px;margin-left:auto}
+.btn.sm{padding:4px 12px;min-width:44px}
 </style>
 </head>
 <body>
 <nav><div class="wrap"><a href="#start">Sporttheorie 7</a><div class="r"><span id="navprog"></span><a class="pill" href="#nachweis">Nachweis</a></div></div></nav>
 <main><div class="wrap" id="app"></div></main>
 <script>
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s).toLowerCase().trim().replace(/ß/g,'ss').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[.,;:!?"'()]/g,'').replace(/\s+/g,' ');
+function rng(seed){let h=2166136261;for(const c of seed){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,seed){const r=rng(seed),b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+
+/* Kreuzworträtsel: Layout wird aus Wort und Hinweis berechnet (deterministisch pro Aufgabe) */
+function cwFits(G,a,r,c,d){
+ const dr=d?1:0,dc=d?0:1,at=(y,x)=>G.get(y+','+x);let cross=0;
+ if(at(r-dr,c-dc)||at(r+dr*a.length,c+dc*a.length))return -1;
+ for(let i=0;i<a.length;i++){
+  const y=r+dr*i,x=c+dc*i,e=at(y,x);
+  if(e){if(e.ch!==a[i]||e.d[d])return -1;cross++}
+  else if(at(y+dc,x+dr)||at(y-dc,x-dr))return -1;
+ }
+ return cross;
+}
+function cwLayout(words,seed){
+ const W=words.map(w=>({a:w[0].toUpperCase(),cl:w[1]}));
+ let best=null;
+ for(let at=0;at<300;at++){
+  const r=rng(seed+'#'+at);
+  const ord=W.map(w=>({w,k:w.a.length+r()*4})).sort((x,y)=>y.k-x.k).map(x=>x.w);
+  const G=new Map(),P=[];let ok=true;
+  const put=(w,y,x,d)=>{for(let i=0;i<w.a.length;i++){const k=(y+(d?i:0))+','+(x+(d?0:i));let e=G.get(k);if(!e){e={ch:w.a[i],d:[0,0]};G.set(k,e)}e.d[d]=1}P.push({a:w.a,cl:w.cl,d,r:y,c:x})};
+  put(ord[0],0,0,0);
+  for(let n=1;n<ord.length;n++){
+   const w=ord[n],cand=[];
+   let y0=1e9,y1=-1e9,x0=1e9,x1=-1e9;
+   for(const p of P){const ey=p.r+(p.d?p.a.length-1:0),ex=p.c+(p.d?0:p.a.length-1);y0=Math.min(y0,p.r);y1=Math.max(y1,ey);x0=Math.min(x0,p.c);x1=Math.max(x1,ex)}
+   for(const p of P)for(let i=0;i<w.a.length;i++)for(let j=0;j<p.a.length;j++){
+    if(w.a[i]!==p.a[j])continue;
+    const d=1-p.d,y=p.d===0?p.r-i:p.r+j,x=p.d===0?p.c+j:p.c-i,cr=cwFits(G,w.a,y,x,d);
+    if(cr<1)continue;
+    const ey=y+(d?w.a.length-1:0),ex=x+(d?0:w.a.length-1);
+    const h=Math.max(y1,ey)-Math.min(y0,y)+1,b=Math.max(x1,ex)-Math.min(x0,x)+1;
+    cand.push([cr*20-h*b-b*4+r()*3,y,x,d]);
+   }
+   if(!cand.length){ok=false;break}
+   cand.sort((u,v)=>v[0]-u[0]);put(w,cand[0][1],cand[0][2],cand[0][3]);
+  }
+  if(!ok)continue;
+  let y0=1e9,y1=-1e9,x0=1e9,x1=-1e9;
+  for(const p of P){const ey=p.r+(p.d?p.a.length-1:0),ex=p.c+(p.d?0:p.a.length-1);y0=Math.min(y0,p.r);y1=Math.max(y1,ey);x0=Math.min(x0,p.c);x1=Math.max(x1,ex)}
+  const rows=y1-y0+1,cols=x1-x0+1,score=rows*cols+12*cols;
+  if(!best||score<best.score)best={score,rows,cols,P:P.map(p=>({...p,r:p.r-y0,c:p.c-x0}))};
+ }
+ if(!best)return null;
+ const starts=[...new Set(best.P.map(p=>p.r+','+p.c))].map(s=>s.split(',').map(Number)).sort((u,v)=>u[0]-v[0]||u[1]-v[1]);
+ const num={};starts.forEach((s,i)=>{num[s[0]+','+s[1]]=i+1});
+ const out=best.P.map(p=>({...p,n:num[p.r+','+p.c]})).sort((u,v)=>u.n-v.n||u.d-v.d);
+ return{rows:best.rows,cols:best.cols,words:out};
+}
+const CWC={};
+const cwL=(t,key)=>CWC[key]||(CWC[key]=cwLayout(t.w,key));
+function cwCells(L){
+ const m=new Map();
+ L.words.forEach(w=>{for(let i=0;i<w.a.length;i++){const y=w.r+(w.d?i:0),x=w.c+(w.d?0:i),k=y+','+x;let e=m.get(k);if(!e){e={ch:w.a[i],n:0};m.set(k,e)}if(i===0)e.n=w.n}});
+ return m;
+}
+/* Reihenfolge-Aufgabe: Startanordnung (nie schon richtig) */
+function soInit(t,key){
+ const n=t.items.length;let o=shuffle([...Array(n).keys()],key);
+ if(o.every((v,i)=>v===i))o=o.slice(1).concat(o[0]);
+ return o;
+}
+/* Memory: Karten aller Paare gemischt */
+function memCards(t,key){
+ const c=[];t.p.forEach((p,i)=>{c.push({p:i,x:p[0]});c.push({p:i,x:p[1]})});
+ return shuffle(c,key);
+}
 const U=[];
 const MC=(q,right,wrong)=>({t:'mc',q,opts:[{x:right,ok:1},...wrong.map(x=>({x,ok:0}))]});
 const TF=(q,rows)=>({t:'tf',q,rows});
@@ -468,7 +572,7 @@ OP("Setze dir ein Bewegungsziel für die nächste Woche (konkret und messbar).",
 ]);
 
 add('b10',90,'Olympische Spiele und Sport in der Schweiz','Olympia ist das grösste Sportfest der Welt. Auch in der Schweiz gibt es viele Organisationen, die Sport fördern.',[
-"Antike Spiele: in Olympia (Griechenland), ab 776 v. Chr., zu Ehren des Zeus.",
+"Antike Spiele: in Olympia (Griechenland), zu Ehren des Zeus. Als frühester belegter Zeitpunkt gilt 776 v. Chr.",
 "Moderne Spiele: seit 1896 in Athen, Gründer: Pierre de Coubertin. Sie finden alle 4 Jahre statt.",
 "Sommerspiele und Winterspiele (Winter seit 1924 in Chamonix).",
 "Die fünf Ringe stehen für die fünf Kontinente.",
@@ -487,17 +591,230 @@ OP("Wähle eine olympische Disziplin oder eine Schweizer Sportlerin bzw. einen S
 OP("Was bedeutet Fairplay für dich? Gib ein Beispiel aus dem Sport.","Fairplay heisst, sich an die Regeln zu halten, den Gegner zu respektieren und Entscheide zu akzeptieren, auch wenn man verliert. Beispiel: Man hilft einem gefoulten Gegner auf.",80),
 OP("Erstelle eine Quizfrage mit Antwort zu einem Kapitel dieser App, die du der Klasse stellen könntest.","Individuelle Antwort. Beispiel: Wie viele Berührungen hat ein Volleyballteam höchstens pro Ballwechsel? Antwort: drei.",40)
 ]);
+/* ================= ZUSATZAUFGABEN: Üben und Festigen ================= */
+const MEM=(q,p)=>({t:'mem',q,p});
+const SO=(q,items)=>({t:'so',q,items});
+const CW=(q,w)=>({t:'cw',q,w});
+const SC=(q,w)=>{const L=[...w.toUpperCase()];let s=shuffle(L,'sc-'+w);if(s.join('')===L.join(''))s=s.slice(1).concat(s[0]);return{t:'fi',lab:'Buchstabensalat',q,text:s.join(' ')+' = ___',ans:[[w]]}};
+const more=(id,tasks)=>{const u=U.find(x=>x.id===id);u.x=u.tasks.length;u.tasks.push(...tasks)};
+const MQ="Decke je zwei Karten auf und finde die passenden Paare.";
+const CQ="Löse das Kreuzworträtsel.";
+const SQ="Bringe die Schritte mit den Pfeilen in die richtige Reihenfolge.";
+const BQ="Die Buchstaben sind durcheinander. Wie heisst das Wort?";
+
+/* ---------- 45 Minuten ---------- */
+more('a1',[
+SO("Bringe die vier Phasen des RAMP-Modells in die richtige Reihenfolge.",["Raise: Puls und Temperatur erhöhen","Activate: Muskeln aktivieren","Mobilise: Gelenke beweglich machen","Potentiate: auf schnelle, kräftige Bewegungen vorbereiten"]),
+MEM(MQ,[["Raise","Puls und Temperatur erhöhen"],["Activate","Muskeln aktivieren"],["Mobilise","Gelenke dynamisch bewegen"],["Potentiate","Auf schnelle Bewegungen vorbereiten"],["Aufwärmdauer","10 bis 15 Minuten"]]),
+MC("Welche Aussage über das Aufwärmen ist FALSCH?","Langes Dehnen im Stand ist direkt vor dem Sport die beste Vorbereitung.",["Puls und Muskeltemperatur steigen.","Das Aufwärmen soll aktiv und dynamisch sein.","Das Verletzungsrisiko sinkt."]),
+CW(CQ,[["PULS","Wird beim Aufwärmen höher: Herzschläge pro Minute"],["DYNAMISCH","So bewegst du dich beim Aufwärmen: mit Bewegung statt Position halten"],["RAMP","Modell mit den Phasen R, A, M und P"],["GELENK","Wird in der Phase Mobilise beweglich gemacht"],["MUSKEL","Wird in der Phase Activate aktiviert"],["TRABEN","Lockeres Laufen, passt zur Phase Raise"]])
+]);
+more('a2',[
+MEM(MQ,[["Puls","Herzschläge pro Minute"],["Lungenkreislauf","Blut nimmt Sauerstoff auf"],["Körperkreislauf","Versorgt Organe und Muskeln"],["Ruhepuls Jugendliche","Meist 60 bis 80"],["Herz","Hohlmuskel, etwa so gross wie die Faust"]]),
+FI("Messen: 15 Sekunden zählen und mal 4 rechnen.","Du zählst in 15 Sekunden 18 Schläge. Das ergibt ___ Schläge pro Minute.",[["72"]]),
+MC("Welche Aussage über das Herz stimmt?","Es ist ein Hohlmuskel mit zwei Vorhöfen und zwei Kammern.",["Es ist ein Knochen mit drei Kammern.","Es pumpt Luft durch den Körper.","Beim Sport schlägt es langsamer."]),
+CW(CQ,[["PULS","Herzschläge pro Minute"],["HERZ","Hohlmuskel, etwa so gross wie deine Faust"],["BLUT","Transportiert Sauerstoff zu den Muskeln"],["LUNGE","Hier nimmt das Blut Sauerstoff auf"],["KAMMER","Davon hat das Herz zwei"],["HANDGELENK","Hier misst du den Puls auf der Daumenseite"]])
+]);
+more('a3',[
+MEM(MQ,[["Bizeps","Beugt den Ellbogen"],["Trizeps","Streckt den Ellbogen"],["Sehne","Verbindet Muskel und Knochen"],["Band","Verbindet Knochen mit Knochen"],["Plank","Statische Muskelarbeit"],["Kniebeuge","Dynamische Muskelarbeit"]]),
+MC("Wer bin ich? Ich verkürze mich, wenn du den Ellbogen beugst, und bin der Gegenspieler des Trizeps.","Der Bizeps",["Die Sehne","Das Band","Der Trizeps"]),
+SC(BQ,"MUSKEL"),
+CW(CQ,[["BIZEPS","Beugt den Ellbogen"],["TRIZEPS","Streckt den Ellbogen"],["SEHNE","Verbindet Muskel und Knochen"],["BAND","Verbindet Knochen mit Knochen"],["PLANK","Übung mit statischer Muskelarbeit"],["BEUGER","Gegenspieler des Streckers"]])
+]);
+more('a4',[
+MEM(MQ,[["Kraft","Liegestütz"],["Ausdauer","20 Minuten Laufen"],["Schnelligkeit","Sprint"],["Beweglichkeit","Spagat"],["Koordination","Jonglieren"]]),
+SC(BQ,"KOORDINATION"),
+MC("Welche Fähigkeit trainierst du hauptsächlich, wenn du 20 Minuten locker joggst?","Ausdauer",["Schnelligkeit","Beweglichkeit","Maximalkraft"]),
+CW(CQ,[["KRAFT","Einen Widerstand überwinden"],["AUSDAUER","Lange durchhalten, ohne stark zu ermüden"],["SPRINT","Trainiert vor allem die Schnelligkeit"],["SPAGAT","Zeigt grosse Beweglichkeit"],["JONGLIEREN","Übung für die Koordination"],["KOORDINATION","Bewegungen genau und flüssig abstimmen"]])
+]);
+more('a5',[
+MEM(MQ,[["Kohlenhydrate","Wichtigster Treibstoff"],["Eiweiss","Baut Muskeln auf"],["Fette","Energiespeicher"],["Wasser","Bestes Getränk beim Sport"],["Gemüse und Früchte","5 Portionen pro Tag"]]),
+SO("Bringe einen Trainingstag mit Training am späten Nachmittag in eine sinnvolle Reihenfolge.",["Mittagessen mit Kohlenhydraten, Gemüse und etwas Eiweiss","Kleiner Snack, zum Beispiel Banane oder Brot","Training mit Wasser oder ungesüsstem Tee","Nach dem Training Kohlenhydrate und etwas Eiweiss"]),
+TF("Richtig oder falsch?",[["Wasser ist beim Sport das beste Getränk.",1],["Eine Portion Gemüse entspricht etwa einer Handvoll.",1],["Eiweiss ist der wichtigste Treibstoff für die Muskeln.",0],["Nach dem Training helfen Kohlenhydrate und etwas Eiweiss bei der Erholung.",1],["Energydrinks sind für Jugendliche geeignet.",0]]),
+CW(CQ,[["WASSER","Bestes Getränk beim Sport"],["EIWEISS","Baustoff für Muskeln und Gewebe"],["PASTA","Liefert viele Kohlenhydrate"],["GEMUESE","Davon sollst du täglich 3 Portionen essen"],["FETT","Dient dem Körper als Energiespeicher"],["KOHLENHYDRATE","Wichtigster Treibstoff für die Muskeln"]])
+]);
+more('a6',[
+MEM(MQ,[["PEACE","Die ersten 1 bis 3 Tage"],["LOVE","Danach: Belastung wieder aufbauen"],["144","Sanität"],["117","Polizei"],["118","Feuerwehr"],["1414","Rega"]]),
+FI("Notrufnummern in der Schweiz.","Die Sanität erreichst du unter ___, die Rega unter ___.",[["144"],["1414"]]),
+TF("Richtig oder falsch?",[["PEACE gilt für die ersten 1 bis 3 Tage nach der Verletzung.",1],["LOVE beginnt damit, die Stelle wieder schrittweise zu belasten.",1],["Die Rega erreicht man unter 117.",0],["112 ist der europäische Notruf.",1],["Wer nicht mehr auftreten kann, geht zum Arzt.",1]]),
+CW(CQ,[["PEACE","Regel für die ersten Tage nach der Verletzung"],["LOVE","Regel für die Zeit danach"],["VERSTAUCHUNG","Bänder am Gelenk sind überdehnt"],["ZERRUNG","Muskel ist überdehnt"],["REGA","Luftrettung mit der Nummer 1414"],["VERBAND","Damit übst du leichten Druck aus (Compress)"]])
+]);
+more('a7',[
+MEM(MQ,[["Fuss zum Gesäss ziehen","Oberschenkelvorderseite"],["Ausfallschritt, Ferse am Boden","Wade"],["Oberkörper nach vorne neigen","Oberschenkelrückseite"],["Arm quer vor der Brust","Schulter"],["15 bis 30 Sekunden","Dauer einer Dehnposition"]]),
+SO("Bringe die Sportstunde in eine sinnvolle Reihenfolge.",["Aufwärmen mit dynamischen Bewegungen","Hauptteil, zum Beispiel Sprint, Sprung oder Wurf","Locker auslaufen oder gehen (Cool-down)","Statisch dehnen"]),
+MC("Wann passt statisches Dehnen am besten?","Am Ende der Stunde nach dem Cool-down",["Direkt vor einem Sprint","Mitten im Spiel","Nie, es ist immer schädlich"]),
+SC(BQ,"BEWEGLICHKEIT")
+]);
+more('a8',[
+MEM(MQ,[["Schulter","Kugelgelenk"],["Knie","Scharniergelenk"],["Halswirbel","7"],["Brustwirbel","12"],["Lendenwirbel","5"],["Knochen Erwachsene","206"]]),
+MC("Welche Form hat die Wirbelsäule von der Seite und wozu dient sie?","Doppel-S-Form: Sie wirkt wie eine Feder und dämpft Stösse.",["Gerade, damit sie möglichst stabil ist.","Kreisförmig, damit man sich drehen kann.","C-Form, damit man schneller läuft."]),
+SC(BQ,"SKELETT"),
+CW(CQ,[["SKELETT","Stützt den Körper und schützt Organe"],["KNOCHEN","Davon haben Erwachsene 206"],["KNORPEL","Wirkt im Gelenk wie ein Stossdämpfer"],["KUGELGELENK","Gelenktyp von Schulter und Hüfte"],["LENDENWIRBEL","Davon hat die Wirbelsäule fünf"],["GELENK","Hier treffen zwei Knochen aufeinander"]])
+]);
+more('a9',[
+SO("Bringe den Wiedereinstieg nach einer Verletzung in die richtige Reihenfolge.",["Freigabe durch Arzt oder Ärztin, schmerzfrei","Mobilisieren","Kraft aufbauen","Sportartspezifisch üben","Wieder Spiel"]),
+MEM(MQ,[["Schiedsrichter","Regeln überwachen"],["Zeitnehmer","Spielzeit stoppen"],["Statistiker","Punkte notieren"],["Coach","Tipps geben"],["Schmerz","Stoppsignal"]]),
+TF("Richtig oder falsch?",[["Training für gesunde Körperteile ist oft möglich, aber nur nach Absprache mit Arzt und Lehrperson.",1],["Man steigt wieder ein, sobald man das Gefühl hat, es geht schon.",0],["Verletzte können durch Beobachten viel lernen.",1],["Bei Schmerzen macht man trotzdem weiter.",0]]),
+OP("Wähle eine Rolle: Schiedsrichter, Zeitnehmer, Statistiker oder Coach. Was musst du dafür wissen und beachten?","Beispiel Zeitnehmer: Ich muss die Spielzeit genau stoppen, bei Unterbrechungen die Uhr anhalten und das Ende klar ansagen. Dafür muss ich die Regeln der Sportart kennen.",60)
+]);
+more('a10',[
+MEM(MQ,[["Schlaf","8 bis 10 Stunden"],["Training","Setzt einen Reiz"],["Erholung","Hier passiert die Anpassung"],["Übertraining","Zu viel Belastung bei zu wenig Pause"],["Bildschirm","Eine Stunde vor dem Schlafen weglegen"]]),
+SO("Bringe den Ablauf von Training und Anpassung in die richtige Reihenfolge.",["Training setzt einen Reiz","Der Körper ermüdet","Erholung und Schlaf","Der Körper ist danach leistungsfähiger"]),
+SC(BQ,"ERHOLUNG"),
+CW(CQ,[["SCHLAF","Wichtigste Form der Erholung"],["REIZ","Wird durch das Training gesetzt"],["ERHOLUNG","Hier passiert die Anpassung"],["PAUSE","Gehört zum Training dazu"],["MUSKEL","Wird im Schlaf repariert"],["TRAINING","Setzt den Reiz, die Anpassung kommt danach"]])
+]);
+
+/* ---------- 90 Minuten ---------- */
+more('b1',[
+MEM(MQ,[["Pritschen","Obere Technik mit den Fingern"],["Baggern","Untere Technik mit den Unterarmen"],["Libero","Abwehrspezialist"],["Rally-Point","Jeder Ballwechsel gibt einen Punkt"],["Satz","Bis 25 Punkte, 2 Punkte Vorsprung"],["Entscheidungssatz","Bis 15 Punkte"]]),
+SO("Bringe die drei Ballkontakte eines Angriffs in die typische Reihenfolge.",["Annahme (Baggern)","Zuspiel (Pritschen)","Angriff (Schmettern)"]),
+CW(CQ,[["PRITSCHEN","Obere Technik mit den Fingern"],["BAGGERN","Untere Technik mit den Unterarmen"],["BLOCK","Abwehr direkt am Netz"],["LIBERO","Abwehrspezialist"],["AUFSCHLAG","Eröffnet den Ballwechsel"],["ZUSPIELER","Verteilt den Ball an die Angreifer"]]),
+TF("Richtig oder falsch?",[["Ein Volleyballfeld ist 18 × 9 Meter gross.",1],["Die Netzhöhe ist in allen Altersstufen gleich.",0],["Ein Team darf den Ball höchstens dreimal berühren.",1],["Beim Rally-Point gibt nur das aufschlagende Team Punkte.",0]]),
+SC(BQ,"SCHMETTERN")
+]);
+more('b2',[
+MEM(MQ,[["Gelbe Karte","Verwarnung"],["Rote Karte","Platzverweis"],["Strafstoss","11 Meter"],["Abseits","Vor Ball und zweitletztem Gegner"],["Torhüter","Darf im Strafraum die Hände benutzen"],["4-4-2","Abwehr, Mittelfeld, Sturm"]]),
+CW(CQ,[["STRAFRAUM","Hier darf der Torhüter den Ball mit den Händen spielen"],["ABSEITS","Regel zur Position beim Zuspiel"],["ELFMETER","Strafstoss aus 11 Metern"],["EINWURF","Der Ball ging über die Seitenlinie"],["VERWARNUNG","Bedeutung der gelben Karte"],["MITTELFELD","Verbindet Abwehr und Angriff"]]),
+TF("Richtig oder falsch?",[["Bei einem Eckstoss gibt es kein Abseits.",1],["Bei einem Abstoss gibt es kein Abseits.",1],["Ein Angreifer in der eigenen Hälfte kann im Abseits stehen.",0],["Ein Foul im eigenen Strafraum führt zu einem Strafstoss für den Gegner.",1]]),
+SC(BQ,"STRAFSTOSS"),
+MC("Wer bin ich? Ich darf im eigenen Strafraum den Ball mit den Händen spielen.","Der Torhüter",["Der Verteidiger","Der Stürmer","Der Schiedsrichter"])
+]);
+more('b3',[
+MEM(MQ,[["Freiwurf","1 Punkt"],["Normaler Wurf","2 Punkte"],["Dreipunktelinie","3 Punkte"],["Angriffszeit","24 Sekunden"],["Korbhöhe","3.05 Meter"],["Persönliche Fouls","Nach 5 scheidet man aus"]]),
+CW(CQ,[["DRIBBLING","Prellen des Balls"],["FREIWURF","Bringt einen Punkt"],["ZONE","Verteidigung, bei der jeder einen Raum deckt"],["FOUL","Unerlaubter Körperkontakt"],["KORB","Hängt auf 3.05 Metern"],["TRAVELLING","Englischer Name für den Schrittfehler"]]),
+SO("Ordne die Würfe nach der Punktzahl, von wenig zu viel.",["Freiwurf","Wurf innerhalb der Dreipunktelinie","Wurf hinter der Dreipunktelinie"]),
+TF("Richtig oder falsch?",[["Man darf mit dem Ball in den Händen beliebig weit laufen.",0],["Ein Doppeldribbling ist erneutes Dribbeln, nachdem man den Ball gehalten hat.",1],["Der Korb hängt auf 3.05 Metern.",1],["Ein Spiel nach FIBA dauert 4 × 10 Minuten.",1],["Ohne Dribbling sind 5 Schritte erlaubt.",0]]),
+SC(BQ,"VERTEIDIGUNG")
+]);
+more('b4',[
+MEM(MQ,[["Tiefstart","Sprint"],["Flop","Hochsprung"],["Cooper-Test","12 Minuten laufen"],["Kugelstossen","Die Kugel liegt am Hals"],["Weitsprung","Absprung vor dem Balken"],["Staffel","Stab in der Wechselzone"]]),
+SO("Bringe die Phasen des Weitsprungs in die richtige Reihenfolge.",["Anlauf","Absprung","Flug","Landung"]),
+CW(CQ,[["SPRINT","Kurzer Lauf mit höchstem Tempo"],["WEITSPRUNG","Gemessen wird vom Balken bis zum Abdruck im Sand"],["HOCHSPRUNG","Der Flop gehört dazu"],["STAFFEL","Der Stab wird übergeben"],["KUGEL","Wird gestossen, nicht geworfen"],["COOPER","Name des 12-Minuten-Tests"]]),
+TF("Richtig oder falsch?",[["Laufen, Springen und Werfen sind Grundformen der Leichtathletik.",1],["Beim Weitsprung wird vom Anlaufbeginn bis zum Sand gemessen.",0],["Der Cooper-Test dauert 12 Minuten.",1],["Beim Flop geht man rückwärts über die Latte.",1]]),
+FI("Ergänze.","Für einen schnellen Sprint braucht es eine hohe Schrittfrequenz und einen kräftigen ___.",[["Abdruck"]])
+]);
+more('b5',[
+MEM(MQ,[["Intensität","Wie hart"],["Umfang","Wie viel"],["Dauer","Wie lange"],["Dichte","Pausen"],["Häufigkeit","Wie oft"],["Progression","Schrittweise steigern"]]),
+SO("Bringe den Ablauf der Trainingsplanung in die richtige Reihenfolge.",["Ziel festlegen","Ausgangswert testen","Plan erstellen","Trainieren","Erneut testen"]),
+MA("SMART-Ziele: Wofür steht jeder Buchstabe?",[["S","spezifisch"],["M","messbar"],["A","attraktiv"],["R","realistisch"],["T","terminiert"]]),
+CW(CQ,[["PROGRESSION","Schrittweise Steigerung der Belastung"],["ERHOLUNG","Gehört zum Plan und zum Training dazu"],["UMFANG","Belastungsnormativ: Wie viel?"],["ZIEL","Wird vor dem Plan festgelegt"],["SMART","Formel für gute Ziele"],["DICHTE","Belastungsnormativ: Pausen"]]),
+MC("Welches Ziel ist NICHT messbar?","Ich will irgendwie fitter werden.",["Ich laufe in 6 Wochen 15 Minuten ohne Pause.","Ich steigere meinen Cooper-Test in 8 Wochen um 200 Meter.","Ich mache bis Ende Monat 20 Kniebeugen am Stück."])
+]);
+more('b6',[
+MEM(MQ,[["Aerob","Mit Sauerstoff"],["Anaerob","Ohne genug Sauerstoff"],["Dauermethode","Lange und gleichmässig"],["Intervallmethode","Belastung und Pause im Wechsel"],["Fahrtspiel","Tempo wechselt frei"],["Talk-Test","Noch sprechen können"]]),
+FI("Rechne mit einem Maximalpuls von 200 Schlägen pro Minute.","60 % davon sind ___ Schläge, 75 % davon sind ___ Schläge pro Minute.",[["120"],["150"]]),
+TF("Richtig oder falsch?",[["Beim anaeroben Training reicht der Sauerstoff nicht aus.",1],["Beim aeroben Training kannst du dich beim Laufen noch unterhalten.",1],["Die Dauermethode wechselt ständig zwischen Belastung und Pause.",0],["Regelmässiges Ausdauertraining macht das Herz kräftiger.",1]]),
+CW(CQ,[["AEROB","Mit Sauerstoff"],["ANAEROB","Ohne genug Sauerstoff"],["INTERVALL","Belastung und Pause im Wechsel"],["FAHRTSPIEL","Das Tempo wechselt frei"],["COOPER","12-Minuten-Lauf"],["AUSDAUER","Hält dich im Spiel und beschleunigt die Erholung"]]),
+SC(BQ,"DAUERMETHODE")
+]);
+more('b7',[
+MEM(MQ,[["Maximalkraft","Einmal sehr schwer heben"],["Schnellkraft","Hochspringen zum Block"],["Kraftausdauer","Viele Liegestütze nacheinander"],["Plank","Übung für den Rumpf"],["Kniebeuge","Beine und Gesäss"],["2 bis 3 Mal","Trainings pro Woche"]]),
+SO("Bringe die Kniebeuge in die richtige Reihenfolge.",["Füsse schulterbreit hinstellen","Brust raus, Rücken gerade, Blick nach vorne","Hüfte nach hinten unten schieben","Kraftvoll aufstehen und dabei ausatmen"]),
+CW(CQ,[["MAXIMALKRAFT","Einmal sehr schwer heben"],["SCHNELLKRAFT","Hochspringen zum Block"],["PLANK","Unterarmstütz für den Rumpf"],["RUMPF","Stabilisiert den ganzen Körper"],["TECHNIK","Wichtiger als viel Gewicht"],["LIEGESTUETZ","Übung für Brust, Trizeps und Rumpf"]]),
+TF("Richtig oder falsch?",[["Technik ist wichtiger als schweres Gewicht.",1],["Beim Krafttraining soll man pressen und die Luft anhalten.",0],["Muskelkater entsteht bei ungewohnter Belastung.",1],["Krafttraining mit dem eigenen Körpergewicht ist für Jugendliche geeignet.",1]]),
+FI("Ergänze.","Man trainiert ___ bis ___ Mal pro Woche und macht dazwischen mindestens einen Pausentag.",[["2","zwei"],["3","drei"]])
+]);
+more('b8',[
+MEM(MQ,[["Grossfeld","40 × 20 Meter"],["Ballhöhe","Nur bis Kniehöhe"],["Ausholen","Nicht über Hüfthöhe"],["Hand","Für Feldspieler verboten"],["Spielzeit Erwachsene","3 × 20 Minuten"]]),
+CW(CQ,[["STOCK","Damit wird der Ball gespielt"],["TORHUETER","Spielt neben den Feldspielern"],["FREISCHLAG","Folge eines Fouls"],["KNIEHOEHE","Bis hierhin darf der Ball gespielt werden"],["SCHLAGSCHUSS","Schussart mit Ausholen"],["FREILAUFEN","Taktik: sich anbieten und Platz suchen"]]),
+TF("Richtig oder falsch?",[["Der gegnerische Stock darf heruntergedrückt werden.",0],["Freilaufen und schnelle Pässe helfen, eine Überzahl zu schaffen.",1],["Ein Unihockeyteam hat auf dem Grossfeld 11 Spieler.",0],["Auf dem Kleinfeld spielt man oft mit 3 Feldspielern.",1]]),
+SC(BQ,"UNIHOCKEY"),
+MC("Welche Handlung ist im Kampf um den Ball erlaubt?","Kontrollierter Körpereinsatz",["Checken","Den gegnerischen Stock anheben","Stossen"])
+]);
+more('b9',[
+MEM(MQ,[["Bewegungsempfehlung","60 Minuten pro Tag"],["Sitzpause","Alle 30 bis 60 Minuten"],["Alltagsbewegung","Treppe, Velo, zu Fuss"],["Muskeln und Knochen kräftigen","Etwa 3 Mal pro Woche"],["Bildschirmzeit","Begrenzen, besonders am Abend"]]),
+FI("Ergänze.","Aktivitäten, die Muskeln und Knochen kräftigen, sollen etwa ___ Mal pro Woche dabei sein.",[["3","drei"]]),
+CW(CQ,[["BEWEGUNG","Stärkt Herz-Kreislauf, Knochen, Muskeln und Psyche"],["SCHLAF","Hängt mit Bewegung und Ernährung zusammen"],["VELO","Alltagsbewegung auf zwei Rädern"],["TREPPE","Statt Lift nehmen"],["KONZENTRATION","Wird durch Bewegung besser"],["HERZ","Wird durch Bewegung leistungsfähiger"]]),
+TF("Richtig oder falsch?",[["Treppe statt Lift zählt zur Alltagsbewegung.",1],["Bewegung stärkt Herz-Kreislauf, Knochen und Muskeln.",1],["Wer abends Sport macht, darf tagsüber stundenlang sitzen.",0],["Bei mittlerer Intensität kommst du leicht ins Schwitzen und kannst noch sprechen.",1]]),
+SC(BQ,"ALLTAGSBEWEGUNG")
+]);
+more('b10',[
+MEM(MQ,[["1896","Erste modernen Spiele in Athen"],["1924","Erste Winterspiele in Chamonix"],["Pierre de Coubertin","Begründer der modernen Spiele"],["Lausanne","Sitz des IOC"],["Fünf Ringe","Fünf Kontinente"],["J+S","Förderprogramm für Kinder und Jugendliche"]]),
+SO("Ordne die Ereignisse zeitlich, vom frühesten zum spätesten.",["Antike Spiele in Olympia","Erste modernen Spiele 1896 in Athen","Erste Winterspiele 1924 in Chamonix"]),
+CW(CQ,[["OLYMPIA","Ort der antiken Spiele"],["ATHEN","Hier fanden 1896 die ersten modernen Spiele statt"],["LAUSANNE","Sitz des IOC"],["PARALYMPICS","Spiele für Athletinnen und Athleten mit Beeinträchtigung"],["COUBERTIN","Begründer der modernen Spiele"],["ZEUS","Die antiken Spiele fanden zu seinen Ehren statt"]]),
+TF("Richtig oder falsch?",[["Die olympischen Ringe stehen für die fünf Kontinente.",1],["Die antiken Spiele fanden zu Ehren des Zeus statt.",1],["Swiss Olympic ist der Dachverband des Schweizer Sports.",1],["Die modernen Spiele finden alle 2 Jahre statt.",0]]),
+MC("Wer ist der Dachverband des Schweizer Sports?","Swiss Olympic",["Das IOC","Jugend+Sport","Die FIFA"])
+]);
+/* Weiterführende Links pro Einheit. Typ: V=Video, L=Lesen, I=Interaktiv, P=PDF */
+const links=(id,a)=>{U.find(x=>x.id===id).v=a.map(([t,u,s,k])=>({t,u,s,k}))};
+links('a1',[
+["Richtig aufwärmen: RAMP-Prinzip erklärt","https://briks-studio.de/insights/richtig-aufwaermen-verletzungspraevention","briks-studio.de","L"],
+["Warm-up Protocol (RAMP), englisch","https://www.youtube.com/watch?v=ruF_lwYClxg","YouTube","V"]]);
+links('a2',[
+["Herz-Kreislauf-System beim Aufwärmen","http://www.sportunterricht.de/aufwaermen/herzleist1.html","sportunterricht.de","L"],
+["fit4future: Herz-Kreislauf-System, Ruhepuls und Belastungspuls","https://www.fit-4-future.ch/files/fit4future/files/loesungsblaetter-5-6-klasse_de.pdf","fit4future (CH)","P"],
+["Experiment: Wie reagieren Atmung und Herzschlag auf Anstrengung?","https://www.science.lu/de/menschlicher-koerper-atmung-und-herzschlag/wie-reagiert-der-mensch-auf-koerperliche-anstrengung","science.lu","I"],
+["Wie reagiert dein Herz auf Sport?","https://www.youtube.com/watch?v=B2ZS9th9ZiY","YouTube","V"]]);
+links('a3',[
+["Muskelkontraktion: Aufbau und Ablauf (anspruchsvoll, ab Sek II)","https://studyflix.de/biologie/muskelkontraktion-2806","Studyflix","V"]]);
+links('a4',[
+["Konditionelle Fähigkeiten: Erklärvideo","https://www.youtube.com/watch?v=TztQAlB50mw","Hessischer Bildungsserver / YouTube","V"],
+["Kraft, Ausdauer, Beweglichkeit, Koordination im Überblick","https://www.youtube.com/watch?v=IrvBfbU_ZII","YouTube","V"]]);
+links('a5',[
+["Das Spiel der Lebensmittelpyramide","https://www.feel-ok.ch/de_CH/jugendliche/themen/ernaehrung/start/spiel-lebensmittelpyramide/spiel-lebensmittelpyramide.cfm","feel-ok.ch","I"],
+["Lebensmittelpyramide für Jugendliche","https://www.sge-ssn.ch/ich-und-du/essen-und-trinken/von-jung-bis-alt/jugend/","SGE","L"],
+["Ernährungspyramide erklärt","https://www.sofatutor.ch/biologie/videos/ernaehrungspyramide-einteilung-von-lebensmitteln-2","sofatutor","V"]]);
+links('a6',[
+["Nach einer Sportverletzung: PEACE & LOVE statt PECH","https://outofseven.de/ratgeber/sportverletzung-schonen-oder-bewegen/","outofseven.de","L"],
+["PECH-Regel überholt: PEACE & LOVE","https://www.apotheken-umschau.de/gesund-bleiben/sport-und-bewegung/pech-regel-ueberholt-peace-and-love-neuer-standard-bei-sportverletzungen-1519689.html","Apotheken Umschau","L"],
+["Wie behandelst du eine Verletzung? PECH und PEACE & LOVE","https://www.youtube.com/watch?v=w_O-vtdB-EI","YouTube","V"]]);
+links('a7',[
+["Dehnen im Schulsport: Fragen und Antworten","https://wimasu.de/dehnen-im-schulsport-fragen-und-antworten/","wimasu.de","L"],
+["Stretching richtig einsetzen: statisch und dynamisch","https://www.womenshealth.de/fitness/fitnesstraining/stretching-dehnen/","Women's Health","L"]]);
+links('a8',[
+["Gelenktypen einfach erklärt","https://studyflix.de/biologie/gelenktypen-3510/video","Studyflix","V"],
+["Das menschliche Skelett: interaktive Tafeln","https://lernen.schule.de/das-menschliche-skelett/","lernen.schule.de","I"]]);
+links('a9',[
+["Der Rollstuhl-Schiri: Wie man trotz Einschränkung beim Sport dabei ist","https://www.fussball.de/newsdetail/schiri-reinel-wir-koennen-alles-schaffen/-/article-id/10067844","fussball.de","L"]]);
+links('a10',[
+["Was passiert im Schlaf?","https://www.stiftung-gesundheitswissen.de/mediathek/videos/insomnie/was-passiert-im-schlaf","Stiftung Gesundheitswissen","V"],
+["Schlaf: So funktioniert die innere Uhr","https://schule.zdf.de/video/plus-schule-schlaf-100","ZDF Schule","V"],
+["Gesunder Schlaf: Unterrichtsmaterial","https://pausenlos-gesund.de/materialien/gesunder-schlaf","pausenlos-gesund.de","L"]]);
+links('b1',[
+["Volleyballregeln im Video erklärt","https://select.bildung.hessen.de/sport/ballsportarten/volleyball/index.html","Hessischer Bildungsserver","V"],
+["Volleyball Regeln einfach erklärt","https://www.volleyballfreak.de/volleyball-lexikon/volleyball-spielregeln-einfach-erklaert","volleyballfreak.de","L"],
+["Bagger und Pritschen: Grundtechniken","https://www.beach-volleyball.de/dein-sport/tipps-fuer-einsteiger/von-den-grundtechniken-zum-beach-volleyball-spielen","beach-volleyball.de","V"]]);
+links('b2',[
+["Teresa erklärt: Was ist Abseits?","https://www.logo.de/abseits-erklaert-100.html","logo! (ZDF)","V"],
+["Abseits im Fussball einfach erklärt","https://www.bundesliga.com/de/faq/wie-sehen-die-fussball-regeln-aus/abseits-im-fussball-einfach-erklaert-23048","bundesliga.com","L"],
+["Die Abseitsregel","https://www.youtube.com/watch?v=AT5xGdYxJOk","YouTube","V"]]);
+links('b3',[
+["Basketball-Regeln in 60 Sekunden","https://www.youtube.com/watch?v=gI4QyD5LDy0","YouTube","V"],
+["Basketball in der Schule: Regeln und Spiele","https://www.kuebler-sport.de/blog/basketball-in-der-schule-regeln-und-spiele-fuer-den-unterricht/","Kübler Sport","L"]]);
+links('b4',[
+["Hochsprung: Flop (Lehrvideo)","https://diler.tube/w/4A3NtMmSVUMg8WnaPQ7dXQ","DiLerTube","V"],
+["Hangsprungtechnik im Weitsprung (Lehrvideo)","https://hubbs.schule/mediathek/leichtathletik-hangsprungtechnik-im-weitsprung","hubbs.schule","V"],
+["Leichtathletik in der Schule: Reihenbilder und Videos","https://www.sportunterricht.ch/Theorie/leichtathletik.php","sportunterricht.ch","L"]]);
+links('b5',[
+["Trainingsplanung und SMART-Ziele","https://tool.jugendundsport.ch/modules/63d2944dbf8a9d09d10f7ff2?lang=de","Jugend+Sport","L"],
+["Sportliche Ziele setzen mit der SMART-Formel","https://www.stiftung-gesundheitswissen.de/mediathek/videos/bewegung-gesuender-leben-mit-sport-und-bewegung/sportliche-ziele-setzen-und","Stiftung Gesundheitswissen","V"]]);
+links('b6',[
+["Ausdauer im Schulsport: Hintergrund und Methoden","https://www.schulsportplaner.ch/fileadmin/sportplan/9/1Hintergrund_Ausdauer_K.pdf","schulsportplaner.ch","P"],
+["mobilesport: Ausdauer, Methoden und Übungen","https://www.mobilesport.ch/assets/lbwp-cdn/mobilesport/files/2013/09/praxis_2007_30_d.pdf","mobilesport.ch","P"]]);
+links('b7',[
+["Kraft: Technik kommt vor Gewichten","https://www.mobilesport.ch/aktuell/kraft-technik-vor-gewichte/","mobilesport.ch","L"],
+["Kniebeuge: Ausführung","https://www.mobilesport.ch/aktuell/krafttraining-bein-und-gesassmuskulatur-2-2/","mobilesport.ch","L"],
+["Krafttraining mit Jugendlichen: die Kniebeuge","https://www.sart.ch/blog/2023/09/26/krafttraining-mit-kindern-und-jugendlichen-die-kniebeuge","SART","L"]]);
+links('b8',[
+["Unihockey: Fairplay von Kopf bis Fuss (mit Videoclips)","https://www.mobilesport.ch/unihockey/spielregeln-fairplay-im-unihockey/","mobilesport.ch","V"],
+["Unihockey: Spielregeln für die Schule","https://www.swissunihockey.ch/files/4616/3050/0484/SUH-Schulregeln-148x210mm-DE-2021-extended-RZ-web.pdf","Swiss Unihockey","P"],
+["Floorball/Unihockey Regeln einfach erklärt","https://www.youtube.com/watch?v=Lfh9ZC7nW-E","YouTube","V"]]);
+links('b9',[
+["Bewegungsempfehlungen für Kinder und Jugendliche","https://www.hepa.admin.ch/de/kinder-und-jugendliche","hepa.ch","L"],
+["Booklet Bewegungsempfehlungen Kinder und Jugendliche","https://www.hepa.admin.ch/dam/de/sd-web/m247FCDDQUBb/booklet-bewegungsempfehlungen-kinder-jugendliche_DE.pdf","hepa.ch","P"]]);
+links('b10',[
+["logo! erklärt: Die Geschichte der Olympischen Spiele","https://www.logo.de/geschichte-olympische-spiele-einfach-erklaert-100.html","logo! (ZDF)","V"],
+["Die Geschichte der Olympischen Spiele einfach erklärt (5 Min.)","https://www.mundo.schule/details/BY-00027232","mundo.schule","V"],
+["Olympische Werte und Olympische Bewegung","https://www.swissolympicteam.ch/de/ueber-uns/olympische-bewegung","Swiss Olympic","L"],
+["Set Olympische Sommerspiele","https://www.olympics.com/museum/de/lernen/fur-lehrerinnen-und-lehrer/set-olympische-sommerspiele","Olympic Museum","L"]]);
 const KEY='sporttheorie-7-verletzt-v1';
 let S={name:'',t:{}};
 try{const r=localStorage.getItem(KEY);if(r){const p=JSON.parse(r);if(p&&p.t)S=p}}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const MSG={};
 const app=document.getElementById('app');
-const TYPE={mc:'Multiple Choice',tf:'Richtig oder falsch',ma:'Zuordnen',fi:'Lückentext',op:'Offene Aufgabe'};
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const norm=s=>String(s).toLowerCase().trim().replace(/ß/g,'ss').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[.,;:!?"'()]/g,'').replace(/\s+/g,' ');
-function rng(seed){let h=2166136261;for(const c of seed){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return()=>{h+=0x6D2B79F5;let t=h;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
-function shuffle(a,seed){const r=rng(seed),b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+const TYPE={mc:'Multiple Choice',tf:'Richtig oder falsch',ma:'Zuordnen',fi:'Lückentext',op:'Offene Aufgabe',mem:'Memory',cw:'Kreuzworträtsel',so:'Reihenfolge'};
+const MEMS={};
 const unitById=id=>U.find(u=>u.id===id);
 const num=u=>U.filter(x=>x.min===u.min).indexOf(u)+1;
 const code=u=>u.min+'-'+num(u);
@@ -506,6 +823,30 @@ function total(){let d=0,n=0,r=0,full=0;U.forEach(u=>{const s=stat(u);d+=s.d;n+=
 const pct=(a,b)=>b?Math.round(a/b*100):0;
 function openTasks(u){const o=[];u.tasks.forEach((_,i)=>{const s=S.t[u.id+'-'+i];if(!(s&&s.d))o.push(i)});return o}
 
+function memHTML(t,key,st,done){
+ const m=new Set(st.m||[]);
+ return '<div class="mem">'+memCards(t,key).map((c,k)=>{const up=done||m.has(c.p);
+  return `<button type="button" class="mcd${up?' up':''}${m.has(c.p)&&!done?' hit':''}" data-act="flip" data-key="${key}" data-k="${k}" aria-label="${up?esc(c.x):'verdeckte Karte'}"${up?' disabled':''}><span>${up?esc(c.x):'?'}</span></button>`}).join('')+
+  `</div><div class="count" data-mv>Züge: ${st.mv||0} · Paare: ${m.size} von ${t.p.length}</div>`;
+}
+function cwHTML(t,key,st,done,bad){
+ const L=cwL(t,key);if(!L)return '<p class="fb bad">Dieses Rätsel konnte nicht erstellt werden.</p>';
+ const cells=cwCells(L),a=st.a&&typeof st.a==='object'&&!Array.isArray(st.a)?st.a:{};
+ let g='';
+ for(let r=0;r<L.rows;r++)for(let c=0;c<L.cols;c++){
+  const k=r+','+c,e=cells.get(k);
+  if(!e){g+='<span class="cwb"></span>';continue}
+  const v=done?e.ch:(a[k]||'');
+  g+=`<span class="cwc${bad(k)?' bad':''}${done?' ok':''}">${e.n?`<i>${e.n}</i>`:''}<input class="cwi" maxlength="1" data-ck="${k}" value="${esc(v)}" aria-label="Feld Zeile ${r+1}, Spalte ${c+1}" autocomplete="off" autocapitalize="characters" spellcheck="false"${done?' disabled':''}></span>`;
+ }
+ const cl=d=>L.words.filter(w=>w.d===d).map(w=>`<li><b>${w.n}</b> ${esc(w.cl)} <span class="n">(${w.a.length})</span></li>`).join('');
+ return `<div class="cw"><div class="cwg" style="--cols:${L.cols};grid-template-columns:repeat(${L.cols},var(--cs))">${g}</div><div class="cwl"><div><h4>Waagerecht</h4><ul>${cl(0)}</ul></div><div><h4>Senkrecht</h4><ul>${cl(1)}</ul></div></div></div><div class="count">Umlaute: ä = ae, ö = oe, ü = ue</div>`;
+}
+function soHTML(t,key,st,done,bad){
+ const n=t.items.length,ord=done?t.items.map((_,i)=>i):(st.o&&st.o.length===n?st.o:soInit(t,key));
+ const b=(pos,dir,sym,lab,off)=>`<button type="button" class="btn ghost sm" data-act="mv" data-key="${key}" data-pos="${pos}" data-dir="${dir}" aria-label="${lab}"${off?' disabled':''}>${sym}</button>`;
+ return '<ol class="so">'+ord.map((ix,pos)=>`<li class="row${bad(pos)?' bad':''}"><span class="sn">${pos+1}</span><span class="rt">${esc(t.items[ix])}</span>`+(done?'':`<span class="mvb">${b(pos,-1,'▲','Nach oben',pos===0)}${b(pos,1,'▼','Nach unten',pos===n-1)}</span>`)+'</li>').join('')+'</ol>';
+}
 function taskHTML(u,i){
  const t=u.tasks[i],key=u.id+'-'+i,st=S.t[key]||{},done=!!st.d,rev=!!st.r,dis=done?' disabled':'',a=st.a;
  const bad=k=>!done&&st.bad&&st.bad.includes(k);
@@ -522,6 +863,12 @@ function taskHTML(u,i){
  }else if(t.t==='fi'){
   const parts=t.text.split('___');
   body='<p class="cloze">'+parts.map((s,k)=>esc(s)+(k<parts.length-1?`<input type="text" class="gap${bad(k)?' bad':''}" data-k="${k}" aria-label="Lücke ${k+1}" value="${esc(done?t.ans[k][0]:((a&&a[k])||''))}" autocomplete="off" autocapitalize="off" spellcheck="false"${dis}>`:'')).join('')+'</p>';
+ }else if(t.t==='mem'){
+  body=memHTML(t,key,st,done);
+ }else if(t.t==='cw'){
+  body=cwHTML(t,key,st,done,bad);
+ }else if(t.t==='so'){
+  body=soHTML(t,key,st,done,bad);
  }else{
   const txt=typeof a==='string'?a:'';
   body=`<textarea rows="5" data-op placeholder="Schreibe hier deine Antwort …" aria-label="Antwort"${dis}>${esc(txt)}</textarea>`+
@@ -529,12 +876,13 @@ function taskHTML(u,i){
  }
  let foot='';
  if(done)foot=`<div class="fb good">✓ Gelöst${rev?' (Lösung wurde angezeigt)':''}</div>`;
+ else if(t.t==='mem')foot='';
  else{
   foot=`<div class="acts"><button class="btn" data-act="check" data-u="${u.id}" data-i="${i}">${t.t==='op'?'Abgeben und Musterlösung ansehen':'Prüfen'}</button>`+
    ((st.n>=3&&t.t!=='op')?`<button class="btn ghost" data-act="reveal" data-u="${u.id}" data-i="${i}">Lösung anzeigen</button>`:'')+`</div>`+
    (MSG[key]?`<div class="fb bad" role="status">${esc(MSG[key])}</div>`:'');
  }
- return `<article class="task${done?' done':''}" id="t-${key}"><div class="th"><b>Aufgabe ${i+1}</b><span class="tag">${TYPE[t.t]}</span></div><p class="q">${esc(t.q)}</p>${body}${foot}</article>`;
+ return `<article class="task${done?' done':''}" id="t-${key}"><div class="th"><b>Aufgabe ${i+1}</b><span class="tag">${t.lab||TYPE[t.t]}</span></div><p class="q">${esc(t.q)}</p>${body}${foot}</article>`;
 }
 const progHTML=s=>`<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${s.n}" aria-valuenow="${s.d}"><i style="width:${pct(s.d,s.n)}%"></i></div><div class="st" style="margin-top:6px;font-weight:600">${s.d} von ${s.n} Aufgaben gelöst</div>`;
 function checkHTML(u){
@@ -545,11 +893,17 @@ function checkHTML(u){
  }
  return `<div class="panel"><h2>Noch offen: ${o.length} von ${u.tasks.length}</h2><p>Diese Aufgaben fehlen noch. Tippe auf eine Aufgabe, um dorthin zu springen.</p><div class="chips">${o.map(i=>`<button class="chip" data-act="jump" data-key="${u.id}-${i}">Aufgabe ${i+1}</button>`).join('')}</div></div>`;
 }
+const LK={V:'Video',L:'Lesen',I:'Interaktiv',P:'PDF'};
+function linksHTML(u){
+ if(!u.v||!u.v.length)return '';
+ return `<section class="links"><h2>Videos und Links</h2><p class="xs">Zum Vertiefen. Externe Seiten: Inhalte können sich ändern. Zählt nicht für die Lernkontrolle.</p><ul>${u.v.filter(l=>/^https:\/\//.test(l.u)||/^http:\/\//.test(l.u)).map(l=>`<li><a href="${esc(l.u)}" target="_blank" rel="noopener noreferrer"><span class="lk">${LK[l.k]||'Link'}</span><b>${esc(l.t)}</b><small>${esc(l.s)}</small></a></li>`).join('')}</ul></section>`;
+}
 function unitView(u){
  return `<a class="back" href="#start">← Alle Einheiten</a>
  <header class="uh m${u.min}"><span class="badge">${u.min} Minuten · Einheit ${num(u)}</span><h1>${esc(u.title)}</h1><p class="lead">${esc(u.intro)}</p><div id="unitprog">${progHTML(stat(u))}</div></header>
  <section class="merke"><h2>Merke dir</h2><ul>${u.k.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></section>
- <div class="tasks">${u.tasks.map((_,i)=>taskHTML(u,i)).join('')}</div>
+ <div class="tasks">${u.tasks.map((_,i)=>(u.x&&i===u.x?'<div class="xh"><h2>Üben und Festigen</h2><p class="xs">Memory, Rätsel und weitere Übungen zum Stoff dieser Einheit.</p></div>':'')+taskHTML(u,i)).join('')}</div>
+ ${linksHTML(u)}
  <section class="check" id="unitcheck">${checkHTML(u)}</section>`;
 }
 function card(u){const s=stat(u);
@@ -562,8 +916,8 @@ function homeView(){
  <div class="panel stack"><div class="sum"><div><div class="big" id="bigd">${T.d}<small> / ${T.n}</small></div><div>Aufgaben gelöst · ${T.full} von ${U.length} Einheiten fertig</div></div><a class="btn" href="#nachweis">Nachweis ansehen</a></div>
  <div class="bar"><i style="width:${pct(T.d,T.n)}%"></i></div>
  <div class="nameline"><label for="nm"><b>Dein Name</b></label><input id="nm" type="text" value="${esc(S.name||'')}" placeholder="Vorname Nachname" autocomplete="name"></div></div></section>
- <section class="sec"><header><h2>45-Minuten-Einheiten</h2><p>Kurze Themen, 5 Aufgaben</p></header><div class="grid">${u45.map(card).join('')}</div></section>
- <section class="sec"><header><h2>90-Minuten-Einheiten</h2><p>Lange Themen, 9 Aufgaben</p></header><div class="grid">${u90.map(card).join('')}</div></section>`;
+ <section class="sec"><header><h2>45-Minuten-Einheiten</h2><p>Kurze Themen, ${u45[0].tasks.length} Aufgaben mit Memory, Rätseln und Texten</p></header><div class="grid">${u45.map(card).join('')}</div></section>
+ <section class="sec"><header><h2>90-Minuten-Einheiten</h2><p>Lange Themen, ${u90[0].tasks.length} Aufgaben mit Memory, Rätseln und Texten</p></header><div class="grid">${u90.map(card).join('')}</div></section>`;
 }
 function nachText(){
  const T=total(),d=new Date().toLocaleDateString('de-CH');
@@ -595,7 +949,8 @@ function route(){
  if(h.startsWith('einheit-')&&(u=unitById(h.slice(8)))){app.innerHTML=unitView(u);document.title=u.title+' · Sporttheorie 7. Klasse'}
  else if(h==='nachweis'){app.innerHTML=nachView();document.title='Nachweis · Sporttheorie 7. Klasse'}
  else{app.innerHTML=homeView();document.title='Sporttheorie 7. Klasse'}
- updNav();window.scrollTo(0,0);
+ for(const k in MEMS)delete MEMS[k];
+ CWLAST=null;updNav();window.scrollTo(0,0);
 }
 function redraw(uid,i){
  const u=unitById(uid),el=document.getElementById('t-'+uid+'-'+i);if(!el)return;
@@ -608,6 +963,8 @@ function readAnswer(el,t){
  if(t.t==='tf')return t.rows.map((_,k)=>{const c=el.querySelector(`input[name$="-${k}"]:checked`);return c?c.value:null});
  if(t.t==='ma')return t.p.map((_,k)=>el.querySelector(`select[data-k="${k}"]`).value);
  if(t.t==='fi')return t.ans.map((_,k)=>el.querySelector(`.gap[data-k="${k}"]`).value);
+ if(t.t==='so'){const key=el.id.slice(2),q=S.t[key]||{};return q.o&&q.o.length===t.items.length?q.o:soInit(t,key)}
+ if(t.t==='cw'){const o={};el.querySelectorAll('.cwi').forEach(x=>{o[x.dataset.ck]=x.value.toUpperCase().trim()});return o}
  return el.querySelector('textarea').value.trim();
 }
 function check(uid,i){
@@ -617,22 +974,56 @@ function check(uid,i){
   if(a.length<t.min){st.a=a;MSG[key]=`Schreibe etwas mehr. Mindestens ${t.min} Zeichen, du hast ${a.length}.`;save();return redraw(uid,i)}
   st.a=a;st.d=1;MSG[key]='';save();return redraw(uid,i);
  }
- const empty=t.t==='mc'?a===null:a.some(x=>x===null||x==='');
- if(empty){st.a=a;MSG[key]=t.t==='mc'?'Wähle zuerst eine Antwort.':'Beantworte zuerst alle Teile.';save();return redraw(uid,i)}
+ const empty=t.t==='mc'?a===null:t.t==='so'?false:t.t==='cw'?Object.values(a).some(x=>!x):a.some(x=>x===null||x==='');
+ if(empty){st.a=a;MSG[key]=t.t==='mc'?'Wähle zuerst eine Antwort.':t.t==='cw'?'Fülle zuerst alle Felder aus.':'Beantworte zuerst alle Teile.';save();return redraw(uid,i)}
  let ok,bad=[];
  if(t.t==='mc')ok=!!shuffle(t.opts,key)[a].ok;
  else if(t.t==='tf'){t.rows.forEach((r,k)=>{if((a[k]==='T')!==!!r[1])bad.push(k)});ok=!bad.length}
  else if(t.t==='ma'){t.p.forEach((p,k)=>{if(a[k]!==p[1])bad.push(k)});ok=!bad.length}
+ else if(t.t==='so'){a.forEach((v,k)=>{if(v!==k)bad.push(k)});ok=!bad.length}
+ else if(t.t==='cw'){cwCells(cwL(t,key)).forEach((e,k)=>{if(a[k]!==e.ch)bad.push(k)});ok=!bad.length}
  else{t.ans.forEach((acc,k)=>{if(!acc.map(norm).includes(norm(a[k])))bad.push(k)});ok=!bad.length}
  st.a=a;
  if(ok){st.d=1;st.bad=[];MSG[key]=''}
- else{st.n=(st.n||0)+1;st.bad=bad;MSG[key]=t.t==='mc'?'Noch nicht richtig. Lies den Kasten «Merke dir» nochmals.':`Noch nicht ganz richtig. ${bad.length} Teil${bad.length>1?'e sind':' ist'} rot markiert.`}
+ else{st.n=(st.n||0)+1;st.bad=bad;MSG[key]=t.t==='mc'?'Noch nicht richtig. Lies den Kasten «Merke dir» nochmals.':`Noch nicht ganz richtig. ${bad.length} ${(t.t==='cw'?['Feld','Felder']:t.t==='so'?['Schritt','Schritte']:['Teil','Teile'])[bad.length>1?1:0]} ${bad.length>1?'sind':'ist'} rot markiert.`}
  save();redraw(uid,i);
 }
+const btnAt=(key,k)=>document.querySelector(`#t-${key} [data-act="flip"][data-k="${k}"]`);
+function face(b,txt,up){b.classList.toggle('up',up);b.firstElementChild.textContent=txt;b.setAttribute('aria-label',up?txt:'verdeckte Karte')}
+function memCount(key,t,st){const e=document.querySelector(`#t-${key} [data-mv]`);if(e)e.textContent=`Züge: ${st.mv||0} · Paare: ${(st.m||[]).length} von ${t.p.length}`}
+function flip(key,k,btn){
+ const m=key.match(/^(.+)-(\d+)$/),t=unitById(m[1]).tasks[+m[2]],st=S.t[key]=S.t[key]||{};
+ if(st.d)return;
+ const M=MEMS[key]=MEMS[key]||{open:[],lock:false},cards=memCards(t,key);
+ if(M.lock||M.open.includes(k)||(st.m||[]).includes(cards[k].p))return;
+ face(btn,cards[k].x,true);M.open.push(k);
+ if(M.open.length<2)return;
+ const[x,y]=M.open,bx=btnAt(key,x),by=btnAt(key,y);
+ st.mv=(st.mv||0)+1;
+ if(cards[x].p===cards[y].p){
+  st.m=[...(st.m||[]),cards[x].p];M.open=[];
+  if(st.m.length===t.p.length){st.d=1;save();return redraw(m[1],+m[2])}
+  save();[bx,by].forEach(b=>{b.classList.add('hit');b.disabled=true});memCount(key,t,st);
+ }else{
+  M.lock=true;save();memCount(key,t,st);
+  setTimeout(()=>{[bx,by].forEach(b=>b&&face(b,'?',false));M.open=[];M.lock=false},1000);
+ }
+}
+function mv(key,pos,dir){
+ const m=key.match(/^(.+)-(\d+)$/),t=unitById(m[1]).tasks[+m[2]],st=S.t[key]=S.t[key]||{};
+ if(st.d)return;
+ const o=(st.o&&st.o.length===t.items.length?st.o:soInit(t,key)).slice(),q=pos+dir;
+ if(q<0||q>=o.length)return;
+ [o[pos],o[q]]=[o[q],o[pos]];st.o=o;st.bad=[];MSG[key]='';save();redraw(m[1],+m[2]);
+ const nb=document.querySelector(`#t-${key} [data-act="mv"][data-pos="${q}"][data-dir="${dir}"]`);if(nb)nb.focus();
+}
+let CWLAST=null;
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act;
  if(a==='check')check(b.dataset.u,+b.dataset.i);
+ else if(a==='flip')flip(b.dataset.key,+b.dataset.k,b);
+ else if(a==='mv')mv(b.dataset.key,+b.dataset.pos,+b.dataset.dir);
  else if(a==='reveal'){const key=b.dataset.u+'-'+b.dataset.i,st=S.t[key]=S.t[key]||{};st.d=1;st.r=1;MSG[key]='';save();redraw(b.dataset.u,+b.dataset.i)}
  else if(a==='jump'){const el=document.getElementById('t-'+b.dataset.key);if(el){el.scrollIntoView({behavior:'smooth',block:'start'})}}
  else if(a==='copy'){const ta=document.getElementById('nachtext'),m=document.getElementById('copymsg');
@@ -645,11 +1036,30 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{
  const t=e.target;
  if(t.id==='nm'){S.name=t.value;save();const x=document.getElementById('nachtext');if(x)x.value=nachText()}
+ else if(t.classList&&t.classList.contains('cwi')){
+  t.value=t.value.toUpperCase().slice(-1);
+  const art=t.closest('.task'),key=art.id.slice(2),st=S.t[key]=S.t[key]||{};
+  if(!st.a||typeof st.a!=='object'||Array.isArray(st.a))st.a={};
+  st.a[t.dataset.ck]=t.value;save();
+  if(t.value){
+   const[r,c]=t.dataset.ck.split(',').map(Number),at=(y,x)=>art.querySelector(`.cwi[data-ck="${y},${x}"]`);
+   const right=at(r,c+1),down=at(r+1,c),L=CWLAST&&CWLAST.key===key?CWLAST:null;
+   let nx=right||down;
+   if(L&&L.r===r-1&&L.c===c&&down)nx=down;else if(L&&L.r===r&&L.c===c-1&&right)nx=right;
+   CWLAST={key,r,c};if(nx)nx.focus();
+  }
+ }
  else if(t.matches('textarea[data-op]')){
   const art=t.closest('.task'),key=art.id.slice(2),m=key.match(/^(.+)-(\d+)$/),u=unitById(m[1]),task=u.tasks[+m[2]];
   const st=S.t[key]=S.t[key]||{};st.a=t.value;save();
   const c=art.querySelector('[data-count]');if(c)c.textContent=`${t.value.trim().length} von mindestens ${task.min} Zeichen`;
  }
+});
+document.addEventListener('focusin',e=>{if(e.target.classList&&e.target.classList.contains('cwi'))e.target.select()});
+document.addEventListener('keydown',e=>{
+ const t=e.target;if(!(t.classList&&t.classList.contains('cwi'))||e.key!=='Backspace'||t.value)return;
+ const art=t.closest('.task'),[r,c]=t.dataset.ck.split(',').map(Number),at=(y,x)=>art.querySelector(`.cwi[data-ck="${y},${x}"]`);
+ const pv=at(r,c-1)||at(r-1,c);if(pv){e.preventDefault();pv.focus()}
 });
 window.addEventListener('hashchange',route);
 route();
